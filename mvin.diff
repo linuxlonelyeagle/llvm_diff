@@ -1,3 +1,31 @@
+diff --git a/clang/include/clang/Basic/BuiltinsRISCV.def b/clang/include/clang/Basic/BuiltinsRISCV.def
+index c26e3b807370..9725f9b74bad 100644
+--- a/clang/include/clang/Basic/BuiltinsRISCV.def
++++ b/clang/include/clang/Basic/BuiltinsRISCV.def
+@@ -79,5 +79,8 @@ TARGET_BUILTIN(__builtin_riscv_sm4ks, "LiLiLiIUc", "nc", "zksed")
+ TARGET_BUILTIN(__builtin_riscv_sm3p0, "LiLi", "nc", "zksh")
+ TARGET_BUILTIN(__builtin_riscv_sm3p1, "LiLi", "nc", "zksh")
+ 
++// Buddy exception
++TARGET_BUILTIN(__builtin_riscv_mvin, "vLiLi","nc","experimental-xbuddy")
++
+ #undef BUILTIN
+ #undef TARGET_BUILTIN
+diff --git a/clang/lib/CodeGen/CGBuiltin.cpp b/clang/lib/CodeGen/CGBuiltin.cpp
+index 801872dd700a..7555fda63633 100644
+--- a/clang/lib/CodeGen/CGBuiltin.cpp
++++ b/clang/lib/CodeGen/CGBuiltin.cpp
+@@ -19635,6 +19635,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
+     ID = Intrinsic::riscv_sm3p1;
+     IntrinsicTypes = {ResultType};
+     break;
++  
++  case RISCV::BI__builtin_riscv_mvin:
++    ID = Intrinsic::riscv_mvin;
++    break;
+ 
+   // Vector builtins are handled from here.
+ #include "clang/Basic/riscv_vector_builtin_cg.inc"
 diff --git a/llvm/include/llvm/IR/IntrinsicsRISCV.td b/llvm/include/llvm/IR/IntrinsicsRISCV.td
 index 002920a2e194..8cd46fbef443 100644
 --- a/llvm/include/llvm/IR/IntrinsicsRISCV.td
