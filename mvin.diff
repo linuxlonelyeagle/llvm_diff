@@ -1,0 +1,84 @@
+diff --git a/llvm/include/llvm/IR/IntrinsicsRISCV.td b/llvm/include/llvm/IR/IntrinsicsRISCV.td
+index 002920a2e194..8cd46fbef443 100644
+--- a/llvm/include/llvm/IR/IntrinsicsRISCV.td
++++ b/llvm/include/llvm/IR/IntrinsicsRISCV.td
+@@ -1582,3 +1582,6 @@ def int_riscv_sm4ed      : ScalarCryptoByteSelectAny;
+ def int_riscv_sm3p0      : ScalarCryptoGprIntrinsicAny;
+ def int_riscv_sm3p1      : ScalarCryptoGprIntrinsicAny;
+ } // TargetPrefix = "riscv"
++
++let  TargetPrefix = "riscv" in
++def int_riscv_mvin : Intrinsic<[],[llvm_i64_ty, llvm_i64_ty],[]>;
+diff --git a/llvm/lib/Support/RISCVISAInfo.cpp b/llvm/lib/Support/RISCVISAInfo.cpp
+index ff9525bd948f..b9044b9b96d1 100644
+--- a/llvm/lib/Support/RISCVISAInfo.cpp
++++ b/llvm/lib/Support/RISCVISAInfo.cpp
+@@ -117,6 +117,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+     {"zvfh", RISCVExtensionVersion{0, 1}},
+     {"zawrs", RISCVExtensionVersion{1, 0}},
+     {"ztso", RISCVExtensionVersion{0, 1}},
++    {"xbuddy", RISCVExtensionVersion{0, 1}},
+ };
+ 
+ static bool stripExperimentalPrefix(StringRef &Ext) {
+diff --git a/llvm/lib/Target/RISCV/RISCV.td b/llvm/lib/Target/RISCV/RISCV.td
+index 3f42886acc52..e4a9a4c9ed7f 100644
+--- a/llvm/lib/Target/RISCV/RISCV.td
++++ b/llvm/lib/Target/RISCV/RISCV.td
+@@ -12,6 +12,11 @@ include "llvm/Target/Target.td"
+ // RISC-V subtarget features and instruction predicates.
+ //===----------------------------------------------------------------------===//
+ 
++def FeatureMvin
++    : SubtargetFeature<"mvin", "HasMvin", "true", "test mvin">;
++
++def HasMvin : Predicate<"Subtarget->hasMvin()">, AssemblerPredicate<(all_of FeatureMvin), "buddy">;
++
+ def FeatureStdExtM
+     : SubtargetFeature<"m", "HasStdExtM", "true",
+                        "'M' (Integer Multiplication and Division)">;
+diff --git a/llvm/lib/Target/RISCV/RISCVInstrInfo.td b/llvm/lib/Target/RISCV/RISCVInstrInfo.td
+index 0af53bb63c9e..9ffe4d6f2f39 100644
+--- a/llvm/lib/Target/RISCV/RISCVInstrInfo.td
++++ b/llvm/lib/Target/RISCV/RISCVInstrInfo.td
+@@ -598,6 +598,12 @@ class Priv_rr<string opcodestr, bits<7> funct7>
+ // Instructions
+ //===----------------------------------------------------------------------===//
+ 
++let hasSideEffects = 1, mayLoad = 1, mayStore = 1 , Predicates = [HasMvin] in
++def mvin : RVInstR<0b0000000, 0b000, OPC_CUSTOM_0,(outs),
++          (ins GPR:$rd, GPR:$rs1), "mvin","$rd, $rs1"> {
++                      let rs2 = 0;
++                     }
++
+ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+ let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+ def LUI : RVInstU<OPC_LUI, (outs GPR:$rd), (ins uimm20_lui:$imm20),
+@@ -1798,3 +1804,6 @@ include "RISCVInstrInfoZicbo.td"
+ //===----------------------------------------------------------------------===//
+ 
+ include "RISCVInstrInfoXVentana.td"
++
++let Predicates = [HasMvin] in
++def: PatGprGpr<int_riscv_mvin, mvin>;
+\ No newline at end of file
+diff --git a/llvm/lib/Target/RISCV/RISCVSubtarget.h b/llvm/lib/Target/RISCV/RISCVSubtarget.h
+index ddfbea7b0474..4a60eb33cbb6 100644
+--- a/llvm/lib/Target/RISCV/RISCVSubtarget.h
++++ b/llvm/lib/Target/RISCV/RISCVSubtarget.h
+@@ -44,6 +44,7 @@ private:
+ 
+   RISCVProcFamilyEnum RISCVProcFamily = Others;
+ 
++  bool HasMvin = false;
+   bool HasStdExtM = false;
+   bool HasStdExtA = false;
+   bool HasStdExtF = false;
+@@ -155,6 +156,7 @@ public:
+   /// initializeProperties().
+   RISCVProcFamilyEnum getProcFamily() const { return RISCVProcFamily; }
+ 
++  bool hasMvin() const { return HasMvin; }
+   bool hasStdExtM() const { return HasStdExtM; }
+   bool hasStdExtA() const { return HasStdExtA; }
+   bool hasStdExtF() const { return HasStdExtF; }
