@@ -50,7 +50,7 @@ index ff9525bd948f..b9044b9b96d1 100644
  
  static bool stripExperimentalPrefix(StringRef &Ext) {
 diff --git a/llvm/lib/Target/RISCV/RISCV.td b/llvm/lib/Target/RISCV/RISCV.td
-index 3f42886acc52..e4a9a4c9ed7f 100644
+index 3f42886acc52..d08385ea7495 100644
 --- a/llvm/lib/Target/RISCV/RISCV.td
 +++ b/llvm/lib/Target/RISCV/RISCV.td
 @@ -12,6 +12,11 @@ include "llvm/Target/Target.td"
@@ -58,7 +58,7 @@ index 3f42886acc52..e4a9a4c9ed7f 100644
  //===----------------------------------------------------------------------===//
  
 +def FeatureMvin
-+    : SubtargetFeature<"mvin", "HasMvin", "true", "test mvin">;
++    : SubtargetFeature<"experimental-xbuddy", "HasMvin", "true", "test mvin">;
 +
 +def HasMvin : Predicate<"Subtarget->hasMvin()">, AssemblerPredicate<(all_of FeatureMvin), "buddy">;
 +
